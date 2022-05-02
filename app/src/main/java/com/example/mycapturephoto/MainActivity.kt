@@ -2,6 +2,8 @@ package com.example.mycapturephoto
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -9,6 +11,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 
 import android.os.Bundle
+import android.util.Log
 
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -36,13 +39,19 @@ import androidx.compose.ui.unit.dp
 
 import androidx.core.content.ContextCompat
 import com.example.mycapturephoto.ui.theme.MyCapturePhotoTheme
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.OutputStream
+import java.util.*
 
 
 @ExperimentalMaterialApi
 class MainActivity : ComponentActivity() {
 
-    var imageUri: Uri? = null
+    //var imageUri: Uri? = null
     var bitmap: Bitmap? = null
+    var x: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,7 +87,7 @@ class MainActivity : ComponentActivity() {
             contract = ActivityResultContracts.TakePicturePreview()
         ) { btm: Bitmap? ->
             this.bitmap = btm
-            this.imageUri = null
+            //this.imageUri = null
         }
 
         val permissionLauncher = rememberLauncherForActivityResult(
@@ -143,6 +152,14 @@ class MainActivity : ComponentActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == Activity.RESULT_OK) {
+            x += 1
+            // TODO (Step 4 : Saving an image which is selected from CAMERA. And printed the path in logcat.)
+            // START
+            val saveImageToInternalStorage =
+                bitmap?.let { saveImageToInternalStorage(it) }
+            Log.e("Saved Image : ", "Path :: $saveImageToInternalStorage")
+            // END
+
             setContent {
                 MyCapturePhotoTheme {
                     Surface(color = MaterialTheme.colors.background) {
@@ -151,7 +168,7 @@ class MainActivity : ComponentActivity() {
                                 TopAppBar(
                                     title = {
                                         Text(
-                                            text = "Capture Image / From Gallery)",
+                                            text = "Capture Image / From Gallery) $x",
                                             modifier = Modifier
                                                 .fillMaxWidth(),
                                             textAlign = TextAlign.Center
@@ -167,4 +184,58 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    companion object {
+
+        // TODO(Step 1 : Creating an cont variable to use for Directory name for copying the selected image.)
+        // START
+        private const val IMAGE_DIRECTORY = "GtgrImages"
+        // END
+    }
+
+    // TODO (Step 2 : Creating a method to save a copy of an selected image to internal storage for use of Happy Places App.)
+    // START
+    /**
+     * A function to save a copy of an image to internal storage for HappyPlaceApp to use.
+     */
+    private fun saveImageToInternalStorage(bitmap: Bitmap): Uri {
+
+        // Get the context wrapper instance
+        val wrapper = ContextWrapper(applicationContext)
+
+        // Initializing a new file
+        // The bellow line return a directory in internal storage
+        /**
+         * The Mode Private here is
+         * File creation mode: the default mode, where the created file can only
+         * be accessed by the calling application (or all applications sharing the
+         * same user ID).
+         */
+        var file = wrapper.getDir(IMAGE_DIRECTORY, Context.MODE_PRIVATE)
+
+        // Create a file to save the image
+        file = File(file, "${UUID.randomUUID()}.jpg")
+
+        try {
+            // Get the file output stream
+            val stream: OutputStream = FileOutputStream(file)
+
+            // Compress bitmap
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+
+            // Flush the stream
+            stream.flush()
+
+            // Close stream
+            stream.close()
+        } catch (e: IOException) { // Catch the exception
+            e.printStackTrace()
+        }
+
+        // Return the saved image uri
+        return Uri.parse(file.absolutePath)
+    }
+    // END
+
+
 }
